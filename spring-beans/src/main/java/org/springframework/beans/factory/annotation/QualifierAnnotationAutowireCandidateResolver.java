@@ -47,11 +47,13 @@ import org.springframework.util.ObjectUtils;
  * against {@link Qualifier qualifier annotations} on the field or parameter to be autowired.
  * Also supports suggested expression values through a {@link Value value} annotation.
  *
- * <p>Also supports JSR-330's {@link jakarta.inject.Qualifier} annotation, if available.
+ * <p>Also supports JSR-330's {@link jakarta.inject.Qualifier} annotation (as well as its
+ * pre-Jakarta {@code javax.inject.Qualifier} equivalent), if available.
  *
  * @author Mark Fisher
  * @author Juergen Hoeller
  * @author Stephane Nicoll
+ * @author Sam Brannen
  * @since 2.5
  * @see AutowireCandidateQualifier
  * @see Qualifier
@@ -65,9 +67,10 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 
 
 	/**
-	 * Create a new QualifierAnnotationAutowireCandidateResolver
-	 * for Spring's standard {@link Qualifier} annotation.
-	 * <p>Also supports JSR-330's {@link jakarta.inject.Qualifier} annotation, if available.
+	 * Create a new {@code QualifierAnnotationAutowireCandidateResolver} for Spring's
+	 * standard {@link Qualifier} annotation.
+	 * <p>Also supports JSR-330's {@link jakarta.inject.Qualifier} annotation (as well as
+	 * its pre-Jakarta {@code javax.inject.Qualifier} equivalent), if available.
 	 */
 	@SuppressWarnings("unchecked")
 	public QualifierAnnotationAutowireCandidateResolver() {
@@ -77,13 +80,20 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 							QualifierAnnotationAutowireCandidateResolver.class.getClassLoader()));
 		}
 		catch (ClassNotFoundException ex) {
+			// JSR-330 API (as included in Jakarta EE) not available - simply skip.
+		}
+		try {
+			this.qualifierTypes.add((Class<? extends Annotation>) ClassUtils.forName("javax.inject.Qualifier",
+							QualifierAnnotationAutowireCandidateResolver.class.getClassLoader()));
+		}
+		catch (ClassNotFoundException ex) {
 			// JSR-330 API not available - simply skip.
 		}
 	}
 
 	/**
-	 * Create a new QualifierAnnotationAutowireCandidateResolver
-	 * for the given qualifier annotation type.
+	 * Create a new {@code QualifierAnnotationAutowireCandidateResolver} for the given
+	 * qualifier annotation type.
 	 * @param qualifierType the qualifier annotation to look for
 	 */
 	public QualifierAnnotationAutowireCandidateResolver(Class<? extends Annotation> qualifierType) {
@@ -92,8 +102,8 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 	}
 
 	/**
-	 * Create a new QualifierAnnotationAutowireCandidateResolver
-	 * for the given qualifier annotation types.
+	 * Create a new {@code QualifierAnnotationAutowireCandidateResolver} for the given
+	 * qualifier annotation types.
 	 * @param qualifierTypes the qualifier annotations to look for
 	 */
 	public QualifierAnnotationAutowireCandidateResolver(Set<Class<? extends Annotation>> qualifierTypes) {
@@ -144,31 +154,43 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 	 */
 	@Override
 	public boolean isAutowireCandidate(BeanDefinitionHolder bdHolder, DependencyDescriptor descriptor) {
-		boolean match = super.isAutowireCandidate(bdHolder, descriptor);
-		if (match) {
-			match = checkQualifiers(bdHolder, descriptor.getAnnotations());
-			if (match) {
-				MethodParameter methodParam = descriptor.getMethodParameter();
-				if (methodParam != null) {
-					Method method = methodParam.getMethod();
-					if (method == null || void.class == method.getReturnType()) {
-						match = checkQualifiers(bdHolder, methodParam.getMethodAnnotations());
+		if (!super.isAutowireCandidate(bdHolder, descriptor)) {
+			return false;
+		}
+		Boolean checked = checkQualifiers(bdHolder, descriptor.getAnnotations());
+		if (checked != Boolean.FALSE) {
+			MethodParameter methodParam = descriptor.getMethodParameter();
+			if (methodParam != null) {
+				Method method = methodParam.getMethod();
+				if (method == null || void.class == method.getReturnType()) {
+					Boolean methodChecked = checkQualifiers(bdHolder, methodParam.getMethodAnnotations());
+					if (methodChecked != null && checked == null) {
+						checked = methodChecked;
 					}
 				}
 			}
 		}
-		return match;
+		return (checked == Boolean.TRUE ||
+				(checked == null && ((RootBeanDefinition) bdHolder.getBeanDefinition()).isDefaultCandidate()));
 	}
 
 	/**
 	 * Match the given qualifier annotations against the candidate bean definition.
+	 * @return {@code false} if a qualifier has been found but not matched,
+	 * {@code true} if a qualifier has been found and matched,
+	 * {@code null} if no qualifier has been found at all
 	 */
-	protected boolean checkQualifiers(BeanDefinitionHolder bdHolder, Annotation[] annotationsToSearch) {
+
+	@Nullable
+	protected Boolean checkQualifiers(BeanDefinitionHolder bdHolder, Annotation[] annotationsToSearch) {
 		boolean qualifierFound = false;
 		if (!ObjectUtils.isEmpty(annotationsToSearch)) {
 			SimpleTypeConverter typeConverter = new SimpleTypeConverter();
 			for (Annotation annotation : annotationsToSearch) {
 				Class<? extends Annotation> type = annotation.annotationType();
+				if (isPlainJavaAnnotation(type)) {
+					continue;
+				}
 				boolean checkMeta = true;
 				boolean fallbackToMeta = false;
 				if (isQualifier(type)) {
@@ -184,6 +206,9 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 					boolean foundMeta = false;
 					for (Annotation metaAnn : type.getAnnotations()) {
 						Class<? extends Annotation> metaType = metaAnn.annotationType();
+						if (isPlainJavaAnnotation(metaType)) {
+							continue;
+						}
 						if (isQualifier(metaType)) {
 							qualifierFound = true;
 							foundMeta = true;
@@ -201,11 +226,21 @@ public class QualifierAnnotationAutowireCandidateResolver extends GenericTypeAwa
 				}
 			}
 		}
-		return (qualifierFound || ((RootBeanDefinition) bdHolder.getBeanDefinition()).isDefaultCandidate());
+		return (qualifierFound ? true : null);
 	}
 
 	/**
-	 * Checks whether the given annotation type is a recognized qualifier type.
+	 * Check whether the given annotation type is a plain "java." annotation,
+	 * typically from {@code java.lang.annotation}.
+	 * <p>Aligned with
+	 * {@code org.springframework.core.annotation.AnnotationsScanner#hasPlainJavaAnnotationsOnly}.
+	 */
+	private boolean isPlainJavaAnnotation(Class<? extends Annotation> annotationType) {
+		return annotationType.getName().startsWith("java.");
+	}
+
+	/**
+	 * Check whether the given annotation type is a recognized qualifier type.
 	 */
 	protected boolean isQualifier(Class<? extends Annotation> annotationType) {
 		for (Class<? extends Annotation> qualifierType : this.qualifierTypes) {

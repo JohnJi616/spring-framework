@@ -91,7 +91,7 @@ import org.springframework.util.StringValueResolver;
  *
  * <p>Autodetects any {@link SchedulingConfigurer} instances in the container,
  * allowing for customization of the scheduler to be used or for fine-grained
- * control over task registration (e.g. registration of {@link Trigger} tasks).
+ * control over task registration (for example, registration of {@link Trigger} tasks).
  * See the {@link EnableScheduling @EnableScheduling} javadocs for complete usage
  * details.
  *
@@ -310,8 +310,9 @@ public class ScheduledAnnotationBeanPostProcessor
 					logger.trace(annotatedMethods.size() + " @Scheduled methods processed on bean '" + beanName +
 							"': " + annotatedMethods);
 				}
-				if ((this.beanFactory != null && !this.beanFactory.isSingleton(beanName)) ||
-						(this.beanFactory instanceof SingletonBeanRegistry sbr && sbr.containsSingleton(beanName))) {
+				if ((this.beanFactory != null &&
+						(!this.beanFactory.containsBean(beanName) || !this.beanFactory.isSingleton(beanName)) ||
+						(this.beanFactory instanceof SingletonBeanRegistry sbr && sbr.containsSingleton(beanName)))) {
 					// Either a prototype/scoped bean or a FactoryBean with a pre-existing managed singleton
 					// -> trigger manual cancellation when ContextClosedEvent comes in
 					this.manualCancellationOnContextClose.add(bean);
@@ -663,7 +664,7 @@ public class ScheduledAnnotationBeanPostProcessor
 			if (event instanceof ContextRefreshedEvent) {
 				// Running in an ApplicationContext -> register tasks this late...
 				// giving other ContextRefreshedEvent listeners a chance to perform
-				// their work at the same time (e.g. Spring Batch's job registration).
+				// their work at the same time (for example, Spring Batch's job registration).
 				finishRegistration();
 			}
 			else if (event instanceof ContextClosedEvent) {

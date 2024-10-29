@@ -39,6 +39,7 @@ import org.springframework.web.bind.annotation.ValueConstants;
  * request header, path variable, cookie, and others.
  *
  * @author Rossen Stoyanchev
+ * @author Olga Maciaszek-Sharma
  * @since 6.0
  */
 public abstract class AbstractNamedValueArgumentResolver implements HttpServiceArgumentResolver {
@@ -46,7 +47,6 @@ public abstract class AbstractNamedValueArgumentResolver implements HttpServiceA
 	private static final TypeDescriptor STRING_TARGET_TYPE = TypeDescriptor.valueOf(String.class);
 
 	protected final Log logger = LogFactory.getLog(getClass());
-
 
 	@Nullable
 	private final ConversionService conversionService;
@@ -129,7 +129,7 @@ public abstract class AbstractNamedValueArgumentResolver implements HttpServiceA
 	 */
 	@Nullable
 	protected NamedValueInfo createNamedValueInfo(
-			MethodParameter parameter, HttpRequestValues.Metadata requestValues) {
+			MethodParameter parameter, HttpRequestValues.Metadata metadata) {
 
 		return createNamedValueInfo(parameter);
 	}
@@ -145,7 +145,7 @@ public abstract class AbstractNamedValueArgumentResolver implements HttpServiceA
 							.formatted(parameter.getNestedParameterType().getName()));
 			}
 		}
-		boolean required = (info.required && !parameter.getParameterType().equals(Optional.class));
+		boolean required = (info.required && !parameter.isOptional());
 		String defaultValue = (ValueConstants.DEFAULT_NONE.equals(info.defaultValue) ? null : info.defaultValue);
 		return info.update(name, required, defaultValue);
 	}
@@ -245,7 +245,9 @@ public abstract class AbstractNamedValueArgumentResolver implements HttpServiceA
 		 * @param name the name to use, possibly empty if not specified
 		 * @param required whether it is marked as required
 		 * @param defaultValue fallback value, possibly {@link ValueConstants#DEFAULT_NONE}
-		 * @param label how it should appear in error messages, e.g. "path variable", "request header"
+		 * @param label how it should appear in error messages, for example, "path variable", "request header"
+		 * @param multiValued whether this argument resolver supports sending multiple values;
+		 * if not, then multiple values are formatted as a String value
 		 */
 		public NamedValueInfo(
 				String name, boolean required, @Nullable String defaultValue, String label, boolean multiValued) {
@@ -260,7 +262,6 @@ public abstract class AbstractNamedValueArgumentResolver implements HttpServiceA
 		public NamedValueInfo update(String name, boolean required, @Nullable String defaultValue) {
 			return new NamedValueInfo(name, required, defaultValue, this.label, this.multiValued);
 		}
-
 	}
 
 }

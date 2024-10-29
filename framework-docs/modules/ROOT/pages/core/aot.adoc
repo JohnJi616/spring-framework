@@ -140,7 +140,7 @@ Taking our previous example, let's assume that `DataSourceConfiguration` is as f
 ======
 Java::
 +
-[source,java,indent=0,subs="verbatim,quotes",role="primary"]
+[source,java,indent=0,subs="verbatim,quotes"]
 ----
 	@Configuration(proxyBeanMethods = false)
 	public class DataSourceConfiguration {
@@ -155,7 +155,7 @@ Java::
 
 Kotlin::
 +
-[source,kotlin,indent=0,subs="verbatim,quotes",role="secondary"]
+[source,kotlin,indent=0,subs="verbatim,quotes"]
 ----
 	@Configuration(proxyBeanMethods = false)
 	class DataSourceConfiguration {
@@ -176,7 +176,7 @@ The AOT engine will convert the configuration class above to code similar to the
 ======
 Java::
 +
-[source,java,indent=0,role="primary"]
+[source,java,indent=0]
 ----
 	/**
 	 * Bean definitions for {@link DataSourceConfiguration}
@@ -244,7 +244,7 @@ However, keep in mind that some optimizations are made at build time based on a 
 This section lists the best practices that make sure your application is ready for AOT.
 
 [[aot.bestpractices.bean-registration]]
-== Programmatic bean registration
+=== Programmatic bean registration
 
 The AOT engine takes care of the `@Configuration` model and any callback that might be
 invoked as part of processing your configuration. If you need to register additional
@@ -278,7 +278,7 @@ Consider the following example:
 ======
 Java::
 +
-[source,java,indent=0,subs="verbatim,quotes",role="primary"]
+[source,java,indent=0,subs="verbatim,quotes"]
 ----
 	@Configuration(proxyBeanMethods = false)
 	public class UserConfiguration {
@@ -287,6 +287,19 @@ Java::
 		public MyInterface myInterface() {
 			return new MyImplementation();
 		}
+
+	}
+----
+
+Kotlin::
++
+[source,kotlin,indent=0,subs="verbatim,quotes"]
+----
+	@Configuration(proxyBeanMethods = false)
+	class UserConfiguration {
+
+		@Bean
+		fun myInterface(): MyInterface = MyImplementation()
 
 	}
 ----
@@ -302,7 +315,7 @@ The example above should be rewritten as follows:
 ======
 Java::
 +
-[source,java,indent=0,subs="verbatim,quotes",role="primary"]
+[source,java,indent=0,subs="verbatim,quotes"]
 ----
 	@Configuration(proxyBeanMethods = false)
 	public class UserConfiguration {
@@ -311,6 +324,19 @@ Java::
 		public MyImplementation myInterface() {
 			return new MyImplementation();
 		}
+
+	}
+----
+
+Kotlin::
++
+[source,kotlin,indent=0,subs="verbatim,quotes"]
+----
+	@Configuration(proxyBeanMethods = false)
+	class UserConfiguration {
+
+		@Bean
+		fun myInterface() = MyImplementation()
 
 	}
 ----
@@ -365,9 +391,18 @@ Consider the following example:
 ======
 Java::
 +
-[source,java,indent=0,subs="verbatim,quotes",role="primary"]
+[source,java,indent=0,subs="verbatim,quotes"]
 ----
 	public class ClientFactoryBean<T extends AbstractClient> implements FactoryBean<T> {
+		// ...
+	}
+----
+
+Kotlin::
++
+[source,kotlin,indent=0,subs="verbatim,quotes"]
+----
+	class ClientFactoryBean<T : AbstractClient> : FactoryBean<T> {
 		// ...
 	}
 ----
@@ -379,7 +414,7 @@ A concrete client declaration should provide a resolved generic for the client, 
 ======
 Java::
 +
-[source,java,indent=0,subs="verbatim,quotes",role="primary"]
+[source,java,indent=0,subs="verbatim,quotes"]
 ----
 	@Configuration(proxyBeanMethods = false)
 	public class UserConfiguration {
@@ -388,6 +423,19 @@ Java::
 		public ClientFactoryBean<MyClient> myClient() {
 			return new ClientFactoryBean<>(...);
 		}
+
+	}
+----
+
+Kotlin::
++
+[source,kotlin,indent=0,subs="verbatim,quotes"]
+----
+	@Configuration(proxyBeanMethods = false)
+	class UserConfiguration {
+
+		@Bean
+		fun myClient() = ClientFactoryBean<MyClient>(...)
 
 	}
 ----
@@ -405,12 +453,22 @@ The following example showcases a basic definition:
 ======
 Java::
 +
-[source,java,indent=0,subs="verbatim,quotes",role="primary"]
+[source,java,indent=0,subs="verbatim,quotes"]
 ----
     RootBeanDefinition beanDefinition = new RootBeanDefinition(ClientFactoryBean.class);
     beanDefinition.setTargetType(ResolvableType.forClassWithGenerics(ClientFactoryBean.class, MyClient.class));
     // ...
     registry.registerBeanDefinition("myClient", beanDefinition);
+----
+
+Kotlin::
++
+[source,kotlin,indent=0,subs="verbatim,quotes"]
+----
+    val beanDefinition = RootBeanDefinition(ClientFactoryBean::class.java)
+    beanDefinition.setTargetType(ResolvableType.forClassWithGenerics(ClientFactoryBean::class.java, MyClient::class.java));
+    // ...
+    registry.registerBeanDefinition("myClient", beanDefinition)
 ----
 ======
 
@@ -423,7 +481,7 @@ The JPA persistence unit has to be known upfront for certain optimizations to ap
 ======
 Java::
 +
-[source,java,indent=0,subs="verbatim,quotes",role="primary"]
+[source,java,indent=0,subs="verbatim,quotes"]
 ----
 	@Bean
 	LocalContainerEntityManagerFactoryBean customDBEntityManagerFactory(DataSource dataSource) {
@@ -431,6 +489,19 @@ Java::
 		factoryBean.setDataSource(dataSource);
 		factoryBean.setPackagesToScan("com.example.app");
 		return factoryBean;
+	}
+----
+
+Kotlin::
++
+[source,kotlin,indent=0,subs="verbatim,quotes"]
+----
+	@Bean
+	fun customDBEntityManagerFactory(dataSource: DataSource): LocalContainerEntityManagerFactoryBean {
+		val factoryBean = LocalContainerEntityManagerFactoryBean()
+		factoryBean.dataSource = dataSource
+		factoryBean.setPackagesToScan("com.example.app")
+		return factoryBean
 	}
 ----
 ======
@@ -442,7 +513,7 @@ factory bean definition, as shown by the following example:
 ======
 Java::
 +
-[source,java,indent=0,subs="verbatim,quotes",role="primary"]
+[source,java,indent=0,subs="verbatim,quotes"]
 ----
 	@Bean
 	PersistenceManagedTypes persistenceManagedTypes(ResourceLoader resourceLoader) {
@@ -456,6 +527,25 @@ Java::
 		factoryBean.setDataSource(dataSource);
 		factoryBean.setManagedTypes(managedTypes);
 		return factoryBean;
+	}
+----
+
+Kotlin::
++
+[source,kotlin,indent=0,subs="verbatim,quotes"]
+----
+	@Bean
+	fun persistenceManagedTypes(resourceLoader: ResourceLoader): PersistenceManagedTypes {
+		return PersistenceManagedTypesScanner(resourceLoader)
+				.scan("com.example.app")
+	}
+
+	@Bean
+	fun customDBEntityManagerFactory(dataSource: DataSource, managedTypes: PersistenceManagedTypes): LocalContainerEntityManagerFactoryBean {
+		val factoryBean = LocalContainerEntityManagerFactoryBean()
+		factoryBean.dataSource = dataSource
+		factoryBean.setManagedTypes(managedTypes)
+		return factoryBean
 	}
 ----
 ======
@@ -475,9 +565,16 @@ The following example makes sure that `config/app.properties` can be loaded from
 ======
 Java::
 +
-[source,java,indent=0,subs="verbatim,quotes",role="primary"]
+[source,java,indent=0,subs="verbatim,quotes"]
 ----
 	runtimeHints.resources().registerPattern("config/app.properties");
+----
+
+Kotlin::
++
+[source,kotlin,indent=0,subs="verbatim,quotes"]
+----
+	runtimeHints.resources().registerPattern("config/app.properties")
 ----
 ======
 

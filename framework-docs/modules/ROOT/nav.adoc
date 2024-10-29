@@ -205,6 +205,7 @@
 **** xref:web/webmvc-view/mvc-freemarker.adoc[]
 **** xref:web/webmvc-view/mvc-groovymarkup.adoc[]
 **** xref:web/webmvc-view/mvc-script.adoc[]
+**** xref:web/webmvc-view/mvc-fragments.adoc[]
 **** xref:web/webmvc-view/mvc-jsp.adoc[]
 **** xref:web/webmvc-view/mvc-feeds.adoc[]
 **** xref:web/webmvc-view/mvc-document.adoc[]
@@ -450,5 +451,6 @@
 ** xref:languages/groovy.adoc[]
 ** xref:languages/dynamic.adoc[]
 * xref:appendix.adoc[]
-* {spring-framework-wiki}[Wiki]
-
+* {spring-framework-docs-root}/{spring-version}/javadoc-api/[Java API,window=_blank, role=link-external]
+* {spring-framework-api-kdoc}/[Kotlin API,window=_blank, role=link-external]
+* {spring-framework-wiki}[Wiki, window=_blank, role=link-external]

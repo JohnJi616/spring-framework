@@ -108,7 +108,7 @@ import org.springframework.web.context.WebApplicationContext;
  * Both resolved and unresolved exceptions are considered a failure that can
  * be asserted as follows:
  * <pre><code class="java">
- * // perform a GET on /boom and assert the message for the the exception
+ * // perform a GET on /boom and assert the message for the exception
  * assertThat(mvc.get().uri("/boom")).hasFailed()
  *         .failure().hasMessage("Test exception");
  * </code></pre>
@@ -355,7 +355,7 @@ public final class MockMvcTester {
 	 * <p>Use only this method if you need to provide a custom
 	 * {@link RequestBuilder}. For regular cases, users should initiate the
 	 * configuration of the request using one of the methods available on
-	 * this instance, e.g. {@link #get()} for HTTP GET.
+	 * this instance, for example, {@link #get()} for HTTP GET.
 	 * <p>Contrary to {@link MockMvc#perform(RequestBuilder)}, this does not
 	 * throw an exception if the request fails with an unresolved exception.
 	 * Rather, the result provides the exception, if any. Assuming that a
